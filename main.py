@@ -2,10 +2,23 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import NoSuchDriverException
+from selenium.common.exceptions import NoSuchWindowException
 
 
 def main():
-    driver = webdriver.Chrome()
+    drivers = [webdriver.Chrome, webdriver.Firefox, webdriver.Edge, webdriver.Safari]
+
+    driver = None
+    while driver is None:
+        try:
+            driver = drivers.pop(0)()
+        except NoSuchDriverException:
+            if len(drivers) == 0:
+                raise Exception(
+                    "No webdrivers were found. Please install a webdriver and try again."
+                )
+            continue
     driver.get("https://apps.guc.edu.eg/student_ext/Evaluation/EvaluateStaff.aspx")
 
     input("Please login to your account and press enter to continue")
@@ -79,4 +92,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except NoSuchWindowException:
+        print("The browser window was closed. Exiting...")
