@@ -1,5 +1,6 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.remote.webdriver import WebDriver as RemoteWebDriver
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.common.exceptions import TimeoutException
 from selenium.common.exceptions import NoSuchDriverException
@@ -7,12 +8,17 @@ from selenium.common.exceptions import NoSuchWindowException
 
 
 def main():
-    drivers = [webdriver.Chrome, webdriver.Firefox, webdriver.Edge, webdriver.Safari]
+    drivers: list[type[RemoteWebDriver]] = [
+        webdriver.Safari,
+        webdriver.Edge,
+        webdriver.Firefox,
+        webdriver.Chrome,
+    ]
 
     driver = None
     while driver is None:
         try:
-            driver = drivers.pop(0)()
+            driver = drivers.pop()()
         except NoSuchDriverException:
             if len(drivers) == 0:
                 raise Exception(
@@ -33,12 +39,20 @@ def main():
 
     for option in range(len_options):
         # Wait for the dropdown list to appear
-        WebDriverWait(driver, 10).until(
-            lambda driver: driver.find_element(
-                By.CSS_SELECTOR,
-                "#ContentPlaceHolderright_ContentPlaceHoldercontent_stfIdLst",
-            )
-        )
+
+        while True:
+            try:
+                WebDriverWait(driver, 10).until(
+                    lambda driver: driver.find_element(
+                        By.CSS_SELECTOR,
+                        "#ContentPlaceHolderright_ContentPlaceHoldercontent_stfIdLst",
+                    )
+                )
+                break
+            except TimeoutException:
+                print("TimeoutException occured, the page is taking too long to load")
+                print("Press enter to try again or Ctrl+C to exit")
+                input()
 
         # select staff member
         dropdown_list = driver.find_element(
@@ -47,27 +61,30 @@ def main():
         )
         dropdown_list.find_elements(By.TAG_NAME, "option")[option + 1].click()
 
-        try:
-            # Wait for the agree radio button to appear
-            WebDriverWait(driver, 10).until(
-                lambda driver: driver.find_element(
-                    By.CSS_SELECTOR,
-                    "#ContentPlaceHolderright_ContentPlaceHoldercontent_objRptr_grade_0_1_0",
+        # if the staff member is already evaluated, skip to the next staff member
+        if (
+            driver.find_element(
+                By.CSS_SELECTOR,
+                "#ContentPlaceHolderright_ContentPlaceHoldercontent_msgLbl",
+            ).text
+            != ""
+        ):
+            continue
+
+        while True:
+            try:
+                # Wait for the agree radio button to appear
+                WebDriverWait(driver, 10).until(
+                    lambda driver: driver.find_element(
+                        By.CSS_SELECTOR,
+                        "#ContentPlaceHolderright_ContentPlaceHoldercontent_objRptr_grade_0_1_0",
+                    )
                 )
-            )
-        except TimeoutException:
-            # if the staff member is already evaluated, skip to the next staff member
-            if (
-                driver.find_element(
-                    By.CSS_SELECTOR,
-                    "#ContentPlaceHolderright_ContentPlaceHoldercontent_msgLbl",
-                ).text
-                != ""
-            ):
-                continue
-            raise Exception(
-                "TimeoutException occured, the page is taking too long to load"
-            )
+                break
+            except TimeoutException:
+                print("TimeoutException occured, the page is taking too long to load")
+                print("Press enter to try again or Ctrl+C to exit")
+                input()
 
         for i in range(14):
             # agree radio button
